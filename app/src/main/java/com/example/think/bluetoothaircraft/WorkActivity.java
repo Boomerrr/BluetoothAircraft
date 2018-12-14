@@ -4,23 +4,26 @@ import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Toast;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Set;
 
@@ -28,10 +31,13 @@ public class WorkActivity extends Activity implements View.OnClickListener ,Blue
     private Button openBluetooth;
     private Button closeBluetooth;
     private Button selectBluetooth;
+    private Button sendMessage;
+    private Button sendMessage1;
     private BluetoothAdapter bluetoothAdapter;
     private ArrayList<BluetoothDevice> arrayList = new ArrayList<>();
     private RecyclerView recyclerView;
     private BluetoothInfoAdapter bluetoothInfoAdapter;
+    private BluetoothSocket bluetoothSocket;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,9 +66,13 @@ public class WorkActivity extends Activity implements View.OnClickListener ,Blue
         openBluetooth = (Button) findViewById(R.id.openBluetooth);
         closeBluetooth = (Button) findViewById(R.id.closeBluetooth);
         selectBluetooth = (Button) findViewById(R.id.selectBluetooth);
+        sendMessage = (Button) findViewById(R.id.sendMessage);
+        sendMessage1 = (Button) findViewById(R.id.sendMessage1);
+        sendMessage.setOnClickListener(this);
         openBluetooth.setOnClickListener(this);
         closeBluetooth.setOnClickListener(this);
         selectBluetooth.setOnClickListener(this);
+        sendMessage1.setOnClickListener(this);
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         bluetoothInfoAdapter = new BluetoothInfoAdapter(arrayList);
         bluetoothInfoAdapter.setItemClickListener(this);
@@ -82,17 +92,28 @@ public class WorkActivity extends Activity implements View.OnClickListener ,Blue
             case R.id.selectBluetooth:
                 selectBluetoothFunction();
                 break;
+            case R.id.sendMessage:
+                sendMessageFunction();
+                break;
+            case R.id.sendMessage1:
+                sendMessageFunction1();
+                break;
         }
+    }
+
+    private void sendMessageFunction1() {
+        SendMessageThread sendMessageThread = new SendMessageThread(bluetoothSocket,"hello java ");
+        sendMessageThread.run();
+    }
+
+    private void sendMessageFunction() {
+        SendMessageThread sendMessageThread = new SendMessageThread(bluetoothSocket,"hello kotlin");
+        sendMessageThread.run();
     }
 
     private void selectBluetoothFunction() {
         arrayList.clear();
-        Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
-        if(pairedDevices.size() > 0){
-            for(BluetoothDevice device : pairedDevices){
-                arrayList.add(device);
-            }
-        }
+        removePairDevice();
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
         intentFilter.addAction(BluetoothDevice.ACTION_FOUND);
@@ -146,7 +167,34 @@ public class WorkActivity extends Activity implements View.OnClickListener ,Blue
         } catch (Exception e) {
             e.printStackTrace();
         }
+
         ConnectThread connectThread = new ConnectThread(bluetoothAdapter,arrayList.get(position));
         connectThread.start();
+        bluetoothSocket = connectThread.mSocket;
+
+    }
+
+
+
+
+    public void removePairDevice(){
+        if(bluetoothAdapter!=null){
+            Set<BluetoothDevice> bondedDevices = bluetoothAdapter.getBondedDevices();
+            for(BluetoothDevice device : bondedDevices ){
+                unpairDevice(device);
+            }
+        }
+
+    }
+
+    //反射来调用BluetoothDevice.removeBond取消设备的配对
+    private void unpairDevice(BluetoothDevice device) {
+        try {
+            Method m = device.getClass()
+                    .getMethod("removeBond", (Class[]) null);
+            m.invoke(device, (Object[]) null);
+        } catch (Exception e) {
+            Log.e("Boomerr---test", e.getMessage());
+        }
     }
 }

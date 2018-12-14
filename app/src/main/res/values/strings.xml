@@ -3,4 +3,6 @@
     <string name="openbluetooth">openBluetooth</string>
     <string name="closebluetooth">closeBluetooth</string>
     <string name="selectbluetooth">selectBluetooth</string>
+    <string name="sendMessage">sendMessage</string>
+    <string name="sendmessage1">sendMessage1</string>
 </resources>
